@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Personal Portfolio Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    body {font-family: 'Segoe UI', Arial, sans-serif; background: #f3f6fa; margin: 0;}
+    .header {background: #185fde; color: #fff; padding: 20px 0; text-align: center;}
+    .section {max-width:900px; margin:40px auto;}
+    .cards {display: flex; gap:32px; flex-wrap:wrap;}
+    .card {background:#fff; border-radius:14px; box-shadow:0 2px 10px #d0d2df33;
+           flex:1; min-width:330px; padding:30px; margin:10px 0;}
+    h2 {margin-top:0; font-size:1.6em; color:#185fde;}
+    table {width:100%; border-collapse:collapse; margin:18px 0;}
+    th, td {padding:8px 12px; text-align:center;}
+    th {background:#e9eeff; color:#333;}
+    tr:nth-child(even) {background:#f5f8ff;}
+    .positive {color:green; font-weight:600;}
+    .negative {color:red; font-weight:600;}
+    .arrow {font-size:1.1em; vertical-align:middle;}
+    .summary {padding:10px 0; background:#e6f4ea; border-radius:8px; font-weight:500; color:#185fde;}
+    @media (max-width: 768px) {.cards{flex-direction:column;} .card{min-width:95vw;}}
+    .icon {font-size:1.0em;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>💹 Personal Portfolio Dashboard</h1>
+        <div style="font-size:1.05em;">Real-time stocks & mutual funds</div>
+    </div>
+    <div class="section">
+        <div class="cards">
+            <div class="card">
+                <h2>Stocks</h2>
+                <div class="summary" id="stocks-summary"></div>
+                <table id="stocks"></table>
+            </div>
+            <div class="card">
+                <h2>Mutual Funds</h2>
+                <div class="summary" id="mf-summary"></div>
+                <table id="mf"></table>
+            </div>
+        </div>
+    </div>
+    <script>
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTCabm_m3kaWFm0iNl6Gjszw3WehU94nbYPvnlqPerFpm_VFBn8McIxkSZm44HSlTYxkrmDT5_0C_eW/pub?output=csv";
+    function formatAmt(val) {
+        if (!val || isNaN(val)) return val || "-";
+        return Number(val).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+    function loadDashboard() {
+        fetch(csvUrl)
+        .then(res => res.text())
+        .then(csv => {
+            const rows = csv.trim().split('\n').map(r => r.split(','));
+            let investedStock=0, currStock=0, profitStock=0, investedMF=0, currMF=0, profitMF=0;
+            let stockHtml = "<tr><th>Company</th><th>Price</th><th>Qty</th><th>Invested</th><th>Avg Price</th><th>Curr Value</th><th>P/L</th></tr>";
+            for (let i=1; i<rows.length; i++) {
+                let r = rows[i];
+                if(r[0]) {
+                    investedStock += parseFloat(r[3]) || 0;
+                    currStock += parseFloat(r[5]) || 0;
+                    profitStock += parseFloat(r[6]) || 0;
+                    stockHtml += `<tr>
+                      <td>${r[0]}</td>
+                      <td>${formatAmt(r[1])}</td>
+                      <td>${formatAmt(r[2])}</td>
+                      <td>${formatAmt(r[3])}</td>
+                      <td>${formatAmt(r[4])}</td>
+                      <td>${formatAmt(r[5])}</td>
+                      <td class="${parseFloat(r[6]) >= 0 ? 'positive' : 'negative'}">${parseFloat(r[6]) >= 0 ? "&#9650;" : "&#9660;"} <span>${formatAmt(r[6])}</span></td>
+                    </tr>`;
+                }
+            }
+            document.getElementById('stocks').innerHTML = stockHtml;
+            document.getElementById('stocks-summary').innerHTML =
+              `Total Invested: ₹${formatAmt(investedStock)} | Current Value: ₹${formatAmt(currStock)} | Overall <span class="${profitStock>=0?'positive':'negative'}">${profitStock>=0?'Gain':'Loss'}: ₹${formatAmt(profitStock)}</span>`;
+
+            let mfHtml = "<tr><th>Scheme</th><th>Units</th><th>Invested</th><th>NAV</th><th>Curr Value</th><th>Gain/Loss</th><th>%</th></tr>";
+            for (let i=1; i<rows.length; i++) {
+                let r = rows[i];
+                if(r[8]) {
+                    investedMF += parseFloat(r[11]) || 0;
+                    currMF += parseFloat(r[13]) || 0;
+                    profitMF += parseFloat(r[14]) || 0;
+                    let gainClass = (parseFloat(r[14]) >= 0 ? 'positive':'negative');
+                    mfHtml += `<tr>
+                      <td>${r[8]}</td>
+                      <td>${formatAmt(r[10])}</td>
+                      <td>${formatAmt(r[11])}</td>
+                      <td>${formatAmt(r[12])}</td>
+                      <td>${formatAmt(r[13])}</td>
+                      <td class="${gainClass}">${parseFloat(r[14]) >= 0 ? "&#9650;" : "&#9660;"} <span>${formatAmt(r[14])}</span></td>
+                      <td>${r[15]}</td>
+                    </tr>`;
+                }
+            }
+            document.getElementById('mf').innerHTML = mfHtml;
+            document.getElementById('mf-summary').innerHTML =
+              `Total Invested: ₹${formatAmt(investedMF)} | Current Value: ₹${formatAmt(currMF)} | Overall <span class="${profitMF>=0?'positive':'negative'}">${profitMF>=0?'Gain':'Loss'}: ₹${formatAmt(profitMF)}</span>`;
+        });
+    }
+    loadDashboard();
+    setInterval(loadDashboard, 60000); // Auto refresh 1 min
+    </script>
+</body>
+</html>
